@@ -4,7 +4,7 @@
 ## about
 ydownl.sh is a simple youtube-dl bash script which can be used to extract audio from common video / stream sources.
 
-![alt text](https://raw.githubusercontent.com/yafp/ydownl.sh/main/current_output.png)
+![alt text](https://raw.githubusercontent.com/yafp/ydownl.sh/main/docs/current_output.png)
 
 
 
@@ -22,10 +22,10 @@ The following packages are required:
 
 
 ## changelog
-see changelog
+Please see the [changlog](docs/CHANGELOG.md) for more details.
 
 
 ## license
-see license
+Please see the [LICENSE](LICENSE) for more details.
 
 
