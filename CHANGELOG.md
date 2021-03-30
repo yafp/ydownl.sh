@@ -1,4 +1,8 @@
 # changelog
+## Version 1.2.0 (20210330)
+* Added check for updates - see #1
+* Added dependecy check for ffmpeg
+
 ## Version 1.1.0 (20210327)
 * Added output after processing finished
 * Minor changes to status output

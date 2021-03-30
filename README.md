@@ -12,7 +12,10 @@ ydownl.sh is a simple youtube-dl bash script which can be used to extract audio 
 The following packages are required:
 
 * youtube-dl
+* ffmpeg
 * zenity
+* curl
+* sed
 
 ## usage
 `./ydownl.sh https://www.youtube.com/watch?v=Y52M28WQu2s`
