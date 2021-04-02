@@ -24,7 +24,7 @@
 * Youtube-DL: Adding --console-title
 
 ## Version 1.0.0 (20210322)
-* Initial
+* Initial version
 * core implementation
 * including support for notification (zenity)
 * basic support for user configs
