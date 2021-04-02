@@ -1,4 +1,15 @@
 # changelog
+## Version 1.3.0 (20210402)
+* Youtube-DL: Adding --add-metadata
+* Youtube-DL: Adding --write-info-json
+* Youtube-DL: Adding --write-annotations
+* Youtube-DL: Adding --write-thumbnail
+* Youtube-DL: Adding --embed-thumbnail
+* Youtube-DL: Adding --user-agent
+* Youtube-DL: Adding --output-na-placeholder 
+* Improved output by missing dependency
+
+
 ## Version 1.2.0 (20210330)
 * Added check for updates - see #1
 * Added dependecy check for ffmpeg
