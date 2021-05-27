@@ -1,4 +1,14 @@
 # changelog
+
+## Version 1.4.0 (20210527)
+* Switched to ncruses like mode based on 'dialog'
+* Added variable for download target folder
+* Youtube-DL: Removing --newline
+* Youtube-DL: Adding update check before execution
+* Youtube-DL: Adding --no-mtime
+
+
+
 ## Version 1.3.0 (20210402)
 * Youtube-DL: Adding --add-metadata
 * Youtube-DL: Adding --write-info-json
@@ -6,7 +16,7 @@
 * Youtube-DL: Adding --write-thumbnail
 * Youtube-DL: Adding --embed-thumbnail
 * Youtube-DL: Adding --user-agent
-* Youtube-DL: Adding --output-na-placeholder 
+* Youtube-DL: Adding --output-na-placeholder
 * Improved output by missing dependency
 
 
@@ -18,9 +28,9 @@
 * Added output after processing finished
 * Minor changes to status output
 * Adding zenity input dialog if started without providing an URL
-* Youtube-DL: Adding --restrict-filenames 
+* Youtube-DL: Adding --restrict-filenames
 * Youtube-DL: Adding --write-description
-* Youtube-DL: Adding --newline 
+* Youtube-DL: Adding --newline
 * Youtube-DL: Adding --console-title
 
 ## Version 1.0.0 (20210322)

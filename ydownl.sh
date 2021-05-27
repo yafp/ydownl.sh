@@ -1,6 +1,10 @@
 #!/bin/bash
 #
 # ydownl - a simple youtube-dl download script
+# 	https://github.com/yafp/ydownl.sh
+#
+# Youtube-dl parameters:
+# 	https://github.com/ytdl-org/youtube-dl/blob/master/README.md
 #
 # USAGE:
 # 	./ydownl.sh URL
@@ -9,8 +13,6 @@
 # ------------------------------------------------------------------------------
 # IDEAS
 # ------------------------------------------------------------------------------
-# - setting for target dir: 
-#		example: CONFIG_TARGET_DIR="~/Downloads"
 # - youtube-dl parameter:
 # - youtube-dl: ffmpeg or avconv?
 #		--prefer-avconv (default)
@@ -28,16 +30,20 @@
 # DEFINE CONSTANTS - DON'T TOUCH
 # ------------------------------------------------------------------------------
 SCRIPT_NAME="ydownl.sh"
-SCRIPT_VERSION="1.3.0"
+SCRIPT_VERSION="1.4.0"
 SCRIPT_LATEST="https://github.com/yafp/ydownl.sh/releases/latest"
 SCRIPT_DEMO_URL="https://www.youtube.com/watch?v=Y52M28WQu2s"
 SCRIPT_USERAGENT="ydownl.sh"
 
 
 
+
 # ------------------------------------------------------------------------------
 # USER CONFIG
 # ------------------------------------------------------------------------------
+# CONFIG_DOWNLOAD_FOLDER: Defines the output folder
+CONFIG_DOWNLOAD_FOLDER="$HOME/Downloads"
+
 #
 # CONFIG_YTDL_AUDIOFORMAT: Specify audio format: 
 # "best", 
@@ -80,21 +86,21 @@ function initColors() {
 	# format
 	bold=$(tput bold)
 	normal=$(tput sgr0)
-	blink=$(tput blink)
-	reverse=$(tput smso)
-	underline=$(tput smul)
+	##blink=$(tput blink)
+	##reverse=$(tput smso)
+	##underline=$(tput smul)
 
 	# colors
-	black=$(tput setaf 0)
+	##black=$(tput setaf 0)
 	red=$(tput setaf 1)
 	green=$(tput setaf 2)
 	yellow=$(tput setaf 3)
 	lime_yellow=$(tput setaf 190)
 	powder_blue=$(tput setaf 153)
-	blue=$(tput setaf 4)
-	magenta=$(tput setaf 5)
-	cyan=$(tput setaf 6)
-	white=$(tput setaf 7)
+	##blue=$(tput setaf 4)
+	##magenta=$(tput setaf 5)
+	##cyan=$(tput setaf 6)
+	##white=$(tput setaf 7)
 }
 
 #######################################
@@ -106,35 +112,6 @@ function initColors() {
 #######################################
 function reset() {
 	tput reset
-}
-
-#######################################
-# Shows a simple header
-# Arguments:
-#   none
-# Outputs:
-#	none
-#######################################
-function showHeader() {
-	printf " ${bold}${lime_yellow}%s${normal} - ${bold}%s ${normal}\n" "$SCRIPT_NAME" "$SCRIPT_VERSION"
-	printf " ${bold}----------------------------------------------------------${normal}\n"
-}
-
-#######################################
-# Displays a text notification using zenity
-# Arguments:
-#   notification text
-# Outputs:
-#	none
-#######################################
-function showGuiNotification() {
-	zenity \
-		--info \
-		--text="$1" \
-		--title="$SCRIPT_NAME" \
-		--width="$CONFIG_ZENITY_WIDTH" \
-		--height="$CONFIG_ZENITY_HEIGHT" \
-		--timeout="$CONFIG_ZENITY_TIMEOUT"
 }
 
 #######################################
@@ -150,9 +127,21 @@ function checkIfExists() {
 	then
 		printf "${red}[ FAIL ]${normal} $1 not found on this system. Please install this dependency.\n" # does not exist
 		exit 1
-	else
-		printf "${green}[  OK  ]${normal} $1 detected\n" # exists
 	fi
+}
+
+#######################################
+# Executes the initial checks for dependencies
+# Arguments:
+#   none
+# Outputs:
+#	none
+#######################################
+function checkDependencies () {
+	checkIfExists "dialog" # for dialogs
+	checkIfExists "curl" # for update-check
+	checkIfExists "sed" # for update-check
+	checkIfExists "youtube-dl" # main-component
 }
 
 #######################################
@@ -168,11 +157,13 @@ function checkVersion() {
     grep '"tag_name":' |                                            # Get tag line
     sed -E 's/.*"([^"]+)".*/\1/' )                                  # Pluck JSON value
 
-	if [ "$SCRIPT_LATEST_VERSION" == "$SCRIPT_VERSION" ]
+	if [ "$SCRIPT_LATEST_VERSION" != "$SCRIPT_VERSION" ]
 	then
-        printf "${green}[  OK  ]${normal} Your current version $SCRIPT_VERSION is up-to-date\n"
-    else
-    	printf "${powder_blue}[ INFO ]${normal} Your version is outdated. $SCRIPT_LATEST_VERSION is available under: $SCRIPT_LATEST\n"
+    	dialog \
+    		--backtitle "ydownl.sh" \
+    		--msgbox "Your version of $SCRIPT_NAME is outdated.\n\nLatest official version is available under:\n$SCRIPT_LATEST" 10 80
+		startMainMenu
+
 	fi
 }
 
@@ -184,72 +175,139 @@ function checkVersion() {
 #	none
 #######################################
 function startDownload () {
-	# start downloading (alt: youtube-dlc)
+	# start the main task
 	youtube-dl \
 		--format bestaudio \
 		--extract-audio \
 		--restrict-filenames \
 		--write-description \
-		--newline \
 		--console-title \
 		--audio-format "$CONFIG_YTDL_AUDIOFORMAT" \
 		--audio-quality $CONFIG_YTDL_AUDIOQUALITY \
-		--output "%(playlist_index)s%(playlist)s%(title)s.%(ext)s" \
+		--output "$CONFIG_DOWNLOAD_FOLDER/%(playlist_index)s%(playlist)s%(title)s.%(ext)s" \
 		--output-na-placeholder "" \
 		--write-info-json \
 		--write-annotations \
 		--write-thumbnail \
 		--embed-thumbnail \
 		--add-metadata \
+		--no-mtime \
 		--user-agent "$SCRIPT_USERAGENT" \
 		"$1"
+
+	startMainMenu
 }
+
+
+
+function startMainMenu () {
+	USERSELECTION=$(dialog \
+		--backtitle "ydownl.sh" \
+		--title "Main menu" \
+		--ok-label "OK" \
+		--cancel-label "Exit" \
+		--menu "Please choose:" 15 55 5 \
+			1 "New download" \
+			2 "Check for youtube-dl updates" \
+			3 "Check for ydownl.sh updates" \
+			9 "Exit" \
+		--output-fd 1)
+
+	case $USERSELECTION in
+		1)
+    		startInputDialog
+    	;;
+
+  		2)
+    		#printf "update youtube-dl"
+    		youtubeDLUpdate
+    	;;
+
+    	3)
+    		#printf "update check"
+    		reset
+    		checkVersion
+    		#reset
+
+    	;;
+
+  		9)
+    		#printf "exit"
+    		reset
+    		exit 0
+    	;;
+
+  		*)
+    		reset
+    	;;
+	esac
+
+}
+
+
+function startInputDialog () {
+	USERURL=$(dialog \
+		--title "New Download" \
+		--backtitle $SCRIPT_NAME \
+		--no-cancel \
+		--inputbox "Please paste the URL here" 10 90 \
+		--output-fd 1)
+
+	checkUserInput $USERURL
+}
+
+
+
+
+function checkUserInput () {
+	if [[ $1 ]]; then
+		reset
+
+		# check if the url is valid
+		if curl --output /dev/null --silent --head --fail "$1"; then
+			#printf " url is reachable"
+			startDownload $1
+		else
+			showErrorMessage "This is not a valid and/or reachable url"
+			startMainMenu
+		fi
+	else
+		# input was zero
+		showErrorMessage "Invalid input"
+		startMainMenu
+	fi
+}
+
+
+
+function showErrorMessage () {
+	dialog \
+		--backtitle "ydownl.sh" \
+		--msgbox "$1" 10 90
+}
+
+
+
+
+function youtubeDLUpdate() {
+	# check for youtube-dl updates
+	reset
+	youtube-dl --update
+	printf "\n"
+	read -p "Press enter to continue"
+	startMainMenu
+}
+
+
+#
+# http://www.unixcl.com/2009/12/linux-dialog-utility-short-tutorial.html
+# https://aplicacionesysistemas.com/en/dialog-crear-menus-tus-scripts/
+# https://linux.die.net/man/1/dialog
 
 
 # ------------------------------------------------------------------------------
 # SCRIPT
 # ------------------------------------------------------------------------------
-reset # clear the screen
-initColors # initialize the color and font formating variables
-showHeader # show the script header
-
-# check all dependencies / requirements
-checkIfExists "youtube-dl" # main-component
-checkIfExists "ffmpeg" # youtube-dl dependency
-checkIfExists "zenity" # for dialogs
-checkIfExists "curl" # for update-check
-checkIfExists "sed" # for update-check
-
-# check for available updates of this script
-checkVersion 
-
-# Check if a parameter/url was supplied
-if [ -z "$1" ]
-then
-	printf "${yellow}[ WARN ]${normal} no URL detected. Starting input dialog\n"
-
-	# start zenity input dialog to ask for the missing url
-	URL=$(zenity --entry --width="$CONFIG_ZENITY_WIDTH" --height="$CONFIG_ZENITY_HEIGHT" --title="$SCRIPT_NAME" --text="Please insert an URL:")
-	if [ -z "$URL" ]
-	then
-    	printf "${red}[ FAIL ]${normal} no URL provided. Usage: ./%s %s\n\n" "$SCRIPT_NAME" "$SCRIPT_DEMO_URL"
-    	exit 1
-	fi
-else
-	printf "${green}[  OK  ]${normal} URL detected\n"
-	URL=$1 # save url in variable
-fi
-
-# check if the url is valid
-if curl --output /dev/null --silent --head --fail "$URL"; then
-	printf "${green}[  OK  ]${normal} URL is valid\n"
-	printf "\nStart processing the following url:\n\t${bold}%s${normal}\n\n" "$URL"
-
-	startDownload "$URL"
-
-	printf "\n${green}[  OK  ]${normal} Finished processing the URL: $URL\n\n"
-	showGuiNotification "Finished downloading\n\t<a href='$URL'>$URL</a>"
-else
-	printf "${red}[ FAIL ]${normal} URL is not reachable. Aborting..\n\n"
-  	exit 1
-fi
+initColors
+checkDependencies
+startInputDialog
