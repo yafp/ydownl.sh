@@ -30,13 +30,11 @@
 # DEFINE CONSTANTS - DON'T TOUCH
 # ------------------------------------------------------------------------------
 SCRIPT_NAME="ydownl.sh"
-SCRIPT_VERSION="1.4.0"
+SCRIPT_VERSION="1.4.1"
+SCRIPT_NAME_VERSION="$SCRIPT_NAME""-v""$SCRIPT_VERSION"
 SCRIPT_LATEST="https://github.com/yafp/ydownl.sh/releases/latest"
 SCRIPT_DEMO_URL="https://www.youtube.com/watch?v=Y52M28WQu2s"
 SCRIPT_USERAGENT="ydownl.sh"
-
-
-
 
 # ------------------------------------------------------------------------------
 # USER CONFIG
@@ -122,7 +120,7 @@ function reset() {
 #	OK if it exists
 #	Error if it doesnt exists
 #######################################
-function checkIfExists() {
+function checkIfExecutableExists() {
 	if ! hash "$1" 2>/dev/null
 	then
 		printf "${red}[ FAIL ]${normal} $1 not found on this system. Please install this dependency.\n" # does not exist
@@ -138,10 +136,11 @@ function checkIfExists() {
 #	none
 #######################################
 function checkDependencies () {
-	checkIfExists "dialog" # for dialogs
-	checkIfExists "curl" # for update-check
-	checkIfExists "sed" # for update-check
-	checkIfExists "youtube-dl" # main-component
+	checkIfExecutableExists "dialog" # for dialogs
+	checkIfExecutableExists "zenity" # for dialogs
+	checkIfExecutableExists "curl" # for update-check
+	checkIfExecutableExists "sed" # for update-check
+	checkIfExecutableExists "youtube-dl" # main-component
 }
 
 #######################################
@@ -152,7 +151,8 @@ function checkDependencies () {
 #	OK if no update available
 #	INFO if update is available
 #######################################
-function checkVersion() {
+function checkScriptVersion() {
+	reset
     SCRIPT_LATEST_VERSION=$(curl --silent "https://api.github.com/repos/yafp/ydownl.sh/releases/latest" | # Get latest release from GitHub api
     grep '"tag_name":' |                                            # Get tag line
     sed -E 's/.*"([^"]+)".*/\1/' )                                  # Pluck JSON value
@@ -162,9 +162,30 @@ function checkVersion() {
     	dialog \
     		--backtitle "ydownl.sh" \
     		--msgbox "Your version of $SCRIPT_NAME is outdated.\n\nLatest official version is available under:\n$SCRIPT_LATEST" 10 80
-		startMainMenu
-
+	else
+		dialog \
+    		--backtitle "ydownl.sh" \
+    		--msgbox "Your version of $SCRIPT_NAME is up to date" 10 80
 	fi
+
+	showMainMenu
+}
+
+#######################################
+# Displays a text notification using zenity
+# Arguments:
+#   notification text
+# Outputs:
+#	none
+#######################################
+function showGuiNotification() {
+	zenity \
+		--info \
+		--text="$1" \
+		--title="$SCRIPT_NAME" \
+		--width="$CONFIG_ZENITY_WIDTH" \
+		--height="$CONFIG_ZENITY_HEIGHT" \
+		--timeout="$CONFIG_ZENITY_TIMEOUT"
 }
 
 #######################################
@@ -195,17 +216,23 @@ function startDownload () {
 		--user-agent "$SCRIPT_USERAGENT" \
 		"$1"
 
-	startMainMenu
+	showGuiNotification "Finished downloading\n\t<a href='$1'>$1</a>"
+	showMainMenu
 }
 
-
-
-function startMainMenu () {
+#######################################
+# Shows the dialog-based main menu
+# Arguments:
+#   none
+# Outputs:
+#	none
+#######################################
+function showMainMenu () {
 	USERSELECTION=$(dialog \
 		--backtitle "ydownl.sh" \
 		--title "Main menu" \
-		--ok-label "OK" \
-		--cancel-label "Exit" \
+		--ok-label "Choose" \
+		--no-cancel \
 		--menu "Please choose:" 15 55 5 \
 			1 "New download" \
 			2 "Check for youtube-dl updates" \
@@ -215,40 +242,42 @@ function startMainMenu () {
 
 	case $USERSELECTION in
 		1)
-    		startInputDialog
-    	;;
+    		showUrlInputDialog
+    		;;
 
   		2)
-    		#printf "update youtube-dl"
     		youtubeDLUpdate
-    	;;
+    		;;
 
     	3)
-    		#printf "update check"
-    		reset
-    		checkVersion
-    		#reset
-
-    	;;
+    		checkScriptVersion
+    		;;
 
   		9)
-    		#printf "exit"
     		reset
     		exit 0
-    	;;
+    		;;
 
   		*)
     		reset
-    	;;
+    		#showErrorDialog "Unexpected error"
+    		;;
 	esac
-
 }
 
-
-function startInputDialog () {
+#######################################
+# Shows the dialog-based url input dialog
+# Arguments:
+#   none
+# Outputs:
+#	none
+#######################################
+function showUrlInputDialog () {
 	USERURL=$(dialog \
 		--title "New Download" \
-		--backtitle $SCRIPT_NAME \
+		--backtitle $SCRIPT_NAME_VERSION \
+		--ok-label "OK" \
+		--cancel-label "Exit" \
 		--no-cancel \
 		--inputbox "Please paste the URL here" 10 90 \
 		--output-fd 1)
@@ -256,58 +285,61 @@ function startInputDialog () {
 	checkUserInput $USERURL
 }
 
-
-
-
+#######################################
+# Checks if the user input is a reachable url or not
+# Arguments:
+#   $1 = user input
+# Outputs:
+#	none
+#######################################
 function checkUserInput () {
 	if [[ $1 ]]; then
 		reset
 
 		# check if the url is valid
 		if curl --output /dev/null --silent --head --fail "$1"; then
-			#printf " url is reachable"
 			startDownload $1
 		else
-			showErrorMessage "This is not a valid and/or reachable url"
-			startMainMenu
+			showErrorDialog "This is not a valid and/or reachable url"
+			showMainMenu
 		fi
 	else
-		# input was zero
-		showErrorMessage "Invalid input"
-		startMainMenu
+		#showErrorDialog "Aborting..." # input was zero
+		showMainMenu
 	fi
 }
 
-
-
-function showErrorMessage () {
+#######################################
+# Shows the dialog-based error dialog
+# Arguments:
+#   $1 = error message
+# Outputs:
+#	none
+#######################################
+function showErrorDialog () {
 	dialog \
 		--backtitle "ydownl.sh" \
 		--msgbox "$1" 10 90
 }
 
-
-
-
+#######################################
+# Call youtube-dl and tell it to run self update
+# Arguments:
+#   none
+# Outputs:
+#	none
+#######################################
 function youtubeDLUpdate() {
-	# check for youtube-dl updates
 	reset
 	youtube-dl --update
 	printf "\n"
 	read -p "Press enter to continue"
-	startMainMenu
+	showMainMenu
 }
-
-
-#
-# http://www.unixcl.com/2009/12/linux-dialog-utility-short-tutorial.html
-# https://aplicacionesysistemas.com/en/dialog-crear-menus-tus-scripts/
-# https://linux.die.net/man/1/dialog
-
 
 # ------------------------------------------------------------------------------
 # SCRIPT
 # ------------------------------------------------------------------------------
 initColors
 checkDependencies
-startInputDialog
+showUrlInputDialog

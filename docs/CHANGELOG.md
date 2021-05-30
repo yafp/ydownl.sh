@@ -1,12 +1,20 @@
 # changelog
 
+## Version 1.4.1 (20210530)
+### Changes
+* Simplify dialogs 
+
+### Fixes
+* Adding back support for zenity notifications
+* Fix ydownl.sh update script (if version is up to date)
+
+
 ## Version 1.4.0 (20210527)
 * Switched to ncruses like mode based on 'dialog'
 * Added variable for download target folder
 * Youtube-DL: Removing --newline
 * Youtube-DL: Adding update check before execution
 * Youtube-DL: Adding --no-mtime
-
 
 
 ## Version 1.3.0 (20210402)

@@ -20,7 +20,7 @@ The following packages are required:
 * dialog
 * youtube-dl
 * ffmpeg
-* (zenity)
+* zenity
 * curl
 * sed
 
