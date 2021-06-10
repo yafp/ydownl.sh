@@ -30,11 +30,13 @@
 # DEFINE CONSTANTS - DON'T TOUCH
 # ------------------------------------------------------------------------------
 SCRIPT_NAME="ydownl.sh"
-SCRIPT_VERSION="1.4.1"
+SCRIPT_VERSION="1.5.0"
 SCRIPT_NAME_VERSION="$SCRIPT_NAME""-v""$SCRIPT_VERSION"
+SCRIPT_GITHUB_URL="https://github.com/yafp/ydownl.sh"
 SCRIPT_LATEST="https://github.com/yafp/ydownl.sh/releases/latest"
-SCRIPT_DEMO_URL="https://www.youtube.com/watch?v=Y52M28WQu2s"
 SCRIPT_USERAGENT="ydownl.sh"
+#
+#SCRIPT_DEMO_URL="https://www.youtube.com/watch?v=Y52M28WQu2s"
 
 # ------------------------------------------------------------------------------
 # USER CONFIG
@@ -59,15 +61,7 @@ CONFIG_YTDL_AUDIOFORMAT="mp3" # default: "mp3"
 # (worse) for VBR or a specific bitrate like 128K (default 5)
 CONFIG_YTDL_AUDIOQUALITY=0
 
-# CONFIG_ZENITY_TIMEOUT: Defines the timeout for the zenity notification dialog after download finished
-CONFIG_ZENITY_TIMEOUT=15 # default 15
-
-# CONFIG_ZENITY_DIALOG_WIDTH: define dialog width
-CONFIG_ZENITY_WIDTH=500 # default 500
-
-# CONFIG_ZENITY_DIALOG_HEIGHT: define dialog height
-CONFIG_ZENITY_HEIGHT=150 # default 150
-
+CONFIG_INFODIALOG_TIMEOUT=5
 
 # ------------------------------------------------------------------------------
 # FUNCTIONS
@@ -82,7 +76,7 @@ CONFIG_ZENITY_HEIGHT=150 # default 150
 #######################################
 function initColors() {
 	# format
-	bold=$(tput bold)
+	#bold=$(tput bold)
 	normal=$(tput sgr0)
 	##blink=$(tput blink)
 	##reverse=$(tput smso)
@@ -91,10 +85,10 @@ function initColors() {
 	# colors
 	##black=$(tput setaf 0)
 	red=$(tput setaf 1)
-	green=$(tput setaf 2)
-	yellow=$(tput setaf 3)
-	lime_yellow=$(tput setaf 190)
-	powder_blue=$(tput setaf 153)
+	#green=$(tput setaf 2)
+	#yellow=$(tput setaf 3)
+	#lime_yellow=$(tput setaf 190)
+	#powder_blue=$(tput setaf 153)
 	##blue=$(tput setaf 4)
 	##magenta=$(tput setaf 5)
 	##cyan=$(tput setaf 6)
@@ -136,12 +130,24 @@ function checkIfExecutableExists() {
 #	none
 #######################################
 function checkDependencies () {
-	checkIfExecutableExists "dialog" # for dialogs
-	checkIfExecutableExists "zenity" # for dialogs
+	checkIfExecutableExists "dialog" # for terminal UI & dialogs
 	checkIfExecutableExists "curl" # for update-check
 	checkIfExecutableExists "sed" # for update-check
 	checkIfExecutableExists "youtube-dl" # main-component
 }
+
+
+#######################################
+# Compares 2 strings - usrf gpt update check
+# Arguments:
+#   none
+# Outputs:
+#	none
+#######################################
+function version { 
+	echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }'; 
+}
+
 
 #######################################
 # Checks if a newer version of the script is available
@@ -157,35 +163,35 @@ function checkScriptVersion() {
     grep '"tag_name":' |                                            # Get tag line
     sed -E 's/.*"([^"]+)".*/\1/' )                                  # Pluck JSON value
 
-	if [ "$SCRIPT_LATEST_VERSION" != "$SCRIPT_VERSION" ]
-	then
+
+    # local version == latest public release
+    if [ $(version $SCRIPT_LATEST_VERSION) -eq $(version "$SCRIPT_VERSION") ]; then
+    	if [ -z "$1" ]; then # output only in default mode - if $1 is not set
+	    	dialog \
+				--hline "$SCRIPT_GITHUB_URL" \
+				--title "Update check: Up-to-date" \
+	    		--backtitle "ydownl.sh" \
+	    		--msgbox "You are running the latest version of $SCRIPT_NAME (as in: $SCRIPT_LATEST_VERSION)" 10 80
+	    fi
+	fi
+
+	# local version < latest public release -> inform about update
+    if [ $(version $SCRIPT_LATEST_VERSION) -gt $(version "$SCRIPT_VERSION") ]; then
     	dialog \
+    		--hline "$SCRIPT_GITHUB_URL" \
+    		--title "Update check: Outdated" \
     		--backtitle "ydownl.sh" \
-    		--msgbox "Your version of $SCRIPT_NAME is outdated.\n\nLatest official version is available under:\n$SCRIPT_LATEST" 10 80
-	else
-		dialog \
-    		--backtitle "ydownl.sh" \
-    		--msgbox "Your version of $SCRIPT_NAME is up to date" 10 80
+    		--msgbox "You are running the outdated version $SCRIPT_VERSION of $SCRIPT_NAME.\n\nLatest official version is $SCRIPT_LATEST_VERSION and is available under:\n$SCRIPT_LATEST" 10 80
+	fi
+
+	# local version > latest public release
+    if [ $(version $SCRIPT_LATEST_VERSION) -lt $(version "$SCRIPT_VERSION") ]; then
+    	if [ -z "$1" ]; then # output only in default mode - if $1 is not set
+    		showInfoDialog "Seems like you are running a development version"
+    	fi
 	fi
 
 	showMainMenu
-}
-
-#######################################
-# Displays a text notification using zenity
-# Arguments:
-#   notification text
-# Outputs:
-#	none
-#######################################
-function showGuiNotification() {
-	zenity \
-		--info \
-		--text="$1" \
-		--title="$SCRIPT_NAME" \
-		--width="$CONFIG_ZENITY_WIDTH" \
-		--height="$CONFIG_ZENITY_HEIGHT" \
-		--timeout="$CONFIG_ZENITY_TIMEOUT"
 }
 
 #######################################
@@ -196,6 +202,9 @@ function showGuiNotification() {
 #	none
 #######################################
 function startDownload () {
+
+	printAsciiArt
+
 	# start the main task
 	youtube-dl \
 		--format bestaudio \
@@ -216,9 +225,10 @@ function startDownload () {
 		--user-agent "$SCRIPT_USERAGENT" \
 		"$1"
 
-	showGuiNotification "Finished downloading\n\t<a href='$1'>$1</a>"
+	showInfoDialog "Finished downloading $1"
 	showMainMenu
 }
+
 
 #######################################
 # Shows the dialog-based main menu
@@ -229,12 +239,13 @@ function startDownload () {
 #######################################
 function showMainMenu () {
 	USERSELECTION=$(dialog \
+		--hline "$SCRIPT_GITHUB_URL" \
 		--backtitle "ydownl.sh" \
 		--title "Main menu" \
 		--ok-label "Choose" \
 		--no-cancel \
-		--menu "Please choose:" 15 55 5 \
-			1 "New download" \
+		--menu "Please choose:" 12 80 5 \
+			1 "New Audio Download" \
 			2 "Check for youtube-dl updates" \
 			3 "Check for ydownl.sh updates" \
 			9 "Exit" \
@@ -260,7 +271,6 @@ function showMainMenu () {
 
   		*)
     		reset
-    		#showErrorDialog "Unexpected error"
     		;;
 	esac
 }
@@ -274,12 +284,13 @@ function showMainMenu () {
 #######################################
 function showUrlInputDialog () {
 	USERURL=$(dialog \
-		--title "New Download" \
+		--hline "$SCRIPT_GITHUB_URL" \
+		--title "New Audio Download" \
 		--backtitle $SCRIPT_NAME_VERSION \
-		--ok-label "OK" \
+		--ok-label "Start" \
 		--cancel-label "Exit" \
 		--no-cancel \
-		--inputbox "Please paste the URL here" 10 90 \
+		--inputbox "Please paste the URL here" 10 80 \
 		--output-fd 1)
 
 	checkUserInput $USERURL
@@ -294,17 +305,26 @@ function showUrlInputDialog () {
 #######################################
 function checkUserInput () {
 	if [[ $1 ]]; then
-		reset
 
-		# check if the url is valid
-		if curl --output /dev/null --silent --head --fail "$1"; then
-			startDownload $1
+		# Check if input looks like a link
+		regex='(https?)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]'
+		if [[ $1 =~ $regex ]]
+		then 
+    		#printf "Link valid"
+    		# check if it is reachable
+			if curl --output /dev/null --silent --head --fail "$1"; then
+				startDownload $1
+			else
+				showErrorDialog "The link $1 is not reachable"
+				showMainMenu
+			fi
+
 		else
-			showErrorDialog "This is not a valid and/or reachable url"
+    		#printf "Link not valid"
+    		showErrorDialog "'$1' is not a valid link"
 			showMainMenu
 		fi
 	else
-		#showErrorDialog "Aborting..." # input was zero
 		showMainMenu
 	fi
 }
@@ -318,9 +338,28 @@ function checkUserInput () {
 #######################################
 function showErrorDialog () {
 	dialog \
+		--hline "$SCRIPT_GITHUB_URL" \
+		--title "Error" \
 		--backtitle "ydownl.sh" \
-		--msgbox "$1" 10 90
+		--msgbox "$1" 10 80
 }
+
+#######################################
+# Shows the dialog-based info dialog
+# Arguments:
+#   $1 = info message
+# Outputs:
+#	none
+#######################################
+function showInfoDialog () {
+	dialog \
+		--hline "$SCRIPT_GITHUB_URL" \
+		--title "Info" \
+		--backtitle "ydownl.sh" \
+		--timeout "$CONFIG_INFODIALOG_TIMEOUT" \
+		--msgbox "$1" 10 80
+}
+
 
 #######################################
 # Call youtube-dl and tell it to run self update
@@ -330,16 +369,32 @@ function showErrorDialog () {
 #	none
 #######################################
 function youtubeDLUpdate() {
-	reset
+	#reset
+	printAsciiArt
 	youtube-dl --update
 	printf "\n"
 	read -p "Press enter to continue"
 	showMainMenu
 }
 
+
+function printAsciiArt() {
+	reset
+	printf '           _                     _       _     \n'
+	printf '          | |                   | |     | |    \n'
+	printf ' _   _  __| | _____      ___ __ | |  ___| |__  \n'
+	printf '| | | |/ _` |/ _ \ \ /\ / / \ _ | | / __|  _ \ \n'
+	printf '| |_| | (_| | (_) \ V  V /| | | | |_\__ \ | | |\n'
+	printf ' \__, |\__,_|\___/ \_/\_/ |_| |_|_(_)___/_| |_|\n'
+	printf '  __/ |                                        \n'
+	printf '  |___/\n\n' 	
+}
+
+
 # ------------------------------------------------------------------------------
 # SCRIPT
 # ------------------------------------------------------------------------------
 initColors
 checkDependencies
+checkScriptVersion "silent"
 showUrlInputDialog
