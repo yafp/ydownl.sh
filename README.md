@@ -4,9 +4,7 @@
 ## about
 ydownl.sh is a simple youtube-dl bash script which can be used to extract audio from common video / stream sources.
 
-![alt text](https://raw.githubusercontent.com/yafp/ydownl.sh/main/docs/current_output.png)
-
-![alt text](https://raw.githubusercontent.com/yafp/ydownl.sh/main/docs/ydown_preview_latest_.gif)
+![alt text](https://raw.githubusercontent.com/yafp/ydownl.sh/main/docs/ydown_preview_latest.gif)
 
 
 ## features
@@ -22,7 +20,6 @@ The following packages are required:
 * dialog
 * youtube-dl
 * ffmpeg
-* zenity
 * curl
 * sed
 
