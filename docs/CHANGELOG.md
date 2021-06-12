@@ -1,5 +1,20 @@
 # changelog
 
+## Version 1.6.0 (20210612)
+### Added
+* Added general / basic support for video mode - see #6
+* Added misc-menu entry to main-menu - see #7
+* Added support for color-styles using rc file - see #8
+* Added about dialog to misc-menu
+
+### Changes
+* Moved both update functions from main-menu to the new misc-menu
+
+### Fixed
+* Added awk to dependencies check - see #5
+
+
+
 ## Version 1.5.0 (20210610)
 ### Added
 * Added silent update check on script start (info onlx if update available)
